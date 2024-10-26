@@ -29,31 +29,39 @@ section tactic
 -- do exfalso, to_expr ```(at_idx_over H_at_idx dec_trivial) >>= exact
 
 def idxOver : TacticM Unit := do
-  let varId ← getMainGoal
-
-
-  let newId ← Lean.MVarId.falseOrByContra varId
+  -- let varId ← getMainGoal
+  -- let newId ← Lean.MVarId.falseOrByContra varId
   -- setGoals [newId]
-
 
   -- mkAppM ``certigrad.T.is_cdifferentiable_log #[k]
   -- let mvarIds ← tid.apply e'
   -- apply at_idx_over H_at_idx (by simp)
 
-  for localDecl in (← getLCtx) do
-    -- let fvarId := localDecl.fvarId
-    let userName ← localDecl.fvarId.getUserName
-    log m!"localDecl.name: {userName}"
-    if userName = `H_at_idx then
-      let e' ←  mkAppM ``at_idx_over #[localDecl.toExpr]
-      let mvarIds ← newId.apply e'
-      setGoals mvarIds
+  match (← getLCtx).findFromUserName? `H_at_idx with
+  | some l =>
+      let e' ←  mkAppM ``at_idx_over #[l.toExpr]
+      let newId ← Lean.MVarId.falseOrByContra (← getMainGoal)
+      setGoals (← newId.apply e')
       return ()
+  | none =>
+    log m!"cannot find hypothesis at_idx_over"
+    return ()
+
+  -- for localDecl in (← getLCtx) do
+  --   -- let fvarId := localDecl.fvarId
+  --   let userName ← localDecl.fvarId.getUserName
+  --   log m!"localDecl.name: {userName}"
+  --   if userName = `H_at_idx then
+  --     let e' ←  mkAppM ``at_idx_over #[localDecl.toExpr]
+  --     let mvarIds ← newId.apply e'
+  --     setGoals mvarIds
+  --     return ()
 
   -- MetavarContext.findUserName? (← getLCtx)
   -- match (← getLCtx).
 
-  setGoals [newId]
+  -- setGoals [varId]
+  -- setGoals [newId]
 
 
   -- Lean.MVarID.exfalso varID
