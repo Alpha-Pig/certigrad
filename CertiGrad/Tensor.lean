@@ -257,7 +257,26 @@ axiom is_bounded_btw_exp₂_around {shape₁ shape₂ shape₃ : S} (f : (x : T 
 
 -- continuously differentiable
 axiom is_cdifferentiable : {ishape : S} →  (T ishape → TReal) → T ishape → Prop
+
+/-
+  f : T ishape -> TReal
+  given input x (of T ishape), output a real
+
+  grad_f: T ishape -> T ishape
+  given a specific input x, compute gradients at that point
+-/
 axiom grad :  {ishape : S} →  (T ishape → TReal) → (T ishape → T ishape)
+/-
+  What's the meaning of D then?
+  f :  T ishape -> T oshape
+
+  D_f: T ishape -> T (ishape ++ oshape) ??
+
+  D_f is a generalization of grad_f, where f's output is a TReal (i.e., T []) in grad_f
+  while f of D_f output is `T oshape`
+
+  when `oshape` is `[]`, D_f will degenerate to grad_f
+-/
 axiom D {ishape oshape : S} : (T ishape → T oshape) → T ishape → T (ishape ++ oshape)
 axiom tmulT {ishape oshape : S} : T (ishape ++ oshape) → T oshape → T ishape
 axiom is_continuous {ishape oshape : S} : (T ishape → T oshape) → T ishape → Prop

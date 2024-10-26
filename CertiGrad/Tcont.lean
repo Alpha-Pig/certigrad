@@ -10,6 +10,8 @@ Properties of continuous functions.
 import CertiGrad.Tfacts
 import CertiGrad.Util
 
+import Lean
+open Lean Elab Tactic Meta
 
 namespace certigrad
 namespace T
@@ -177,7 +179,54 @@ end T
 --      , assumption
 -- ]
 
+def proveContinuousCore (goalId : MVarId) : TacticM (List MVarId) := do
+  let candidate_exprs : List (MetaM Expr) := [
+    (mkAppM ``certigrad.T.continuous_id #[]),
+     (mkAppM ``certigrad.T.continuous_const #[]),
+     (mkAppM ``certigrad.T.continuous_add_fs #[]),
+     (mkAppM ``certigrad.T.continuous_sumr #[]),
+
+     -- TODO(dhs): bug in Lean 3
+     -- This causes a silent "sorry" in prove_continuous_core with no explanation
+--     (mkAppM ``certigrad.T.continuous_mvn_kl₁
+--     (mkAppM ``certigrad.T.continuous_mvn_kl₂,
+
+     (mkAppM ``certigrad.T.continuous_lift₀ #[]),
+     (mkAppM ``certigrad.T.continuous_scale #[]),
+     (mkAppM ``certigrad.T.continuous_neg #[]),
+     (mkAppM ``certigrad.T.continuous_exp #[]),
+     (mkAppM ``certigrad.T.continuous_log #[]),
+     (mkAppM ``certigrad.T.continuous_sqrt #[]),
+     (mkAppM ``certigrad.T.continuous_add₁ #[]),
+     (mkAppM ``certigrad.T.continuous_add₂ #[]),
+     (mkAppM ``certigrad.T.continuous_mul₁ #[]),
+     (mkAppM ``certigrad.T.continuous_mul₂ #[]),
+     (mkAppM ``certigrad.T.continuous_sub₁ #[]),
+     (mkAppM ``certigrad.T.continuous_sub₂ #[]),
+     (mkAppM ``certigrad.T.continuous_div₁ #[]),
+     (mkAppM ``certigrad.T.continuous_div₂ #[]),
+     (mkAppM ``certigrad.T.continuous_sum #[]),
+     (mkAppM ``certigrad.T.continuous_gemm₁ #[]),
+     (mkAppM ``certigrad.T.continuous_gemm₂ #[]),
+     (mkAppM ``certigrad.T.continuous_square #[]),
+     (mkAppM ``certigrad.T.continuous_mvn_pdf_μ #[]),
+     (mkAppM ``certigrad.T.continuous_mvn_pdf_σ #[]),
+     (mkAppM ``certigrad.T.continuous_scale_fs #[]),
+     (mkAppM ``certigrad.T.continuous_scale_f #[]),
+     (mkAppM ``certigrad.T.continuous_chain #[]),
+    --  assumption
+  ]
+
+  -- let goalId ← getMainGoal
+  -- setGoals (← myFirstApply goalId candidate_exprs)
+  myFirstApply goalId candidate_exprs
+
+
 -- meta def prove_continuous : tactic unit := repeat (prove_continuous_core <|> prove_preconditions_core)
+
+elab "proveContinuous" : tactic => do
+  let goalId ← getMainGoal
+  setGoals (← proveContinuousCore goalId)
 
 -- end tactic
 

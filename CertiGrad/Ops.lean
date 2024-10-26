@@ -50,13 +50,6 @@ def idxOver : TacticM Unit := do
         | none => replaceMainGoal []
         | some (_, mvarId) => replaceMainGoal [mvarId]
 
-      -- run simp on every sub-goal
-    -- let (result?, stats) ← simpGoal mvarId ctx (simprocs := simprocs) (simplifyTarget := simplifyTarget) (discharge? := discharge?) (fvarIdsToSimp := fvarIdsToSimp)
-    -- match result? with
-    -- | none => replaceMainGoal []
-    -- | some (_, mvarId) => replaceMainGoal [mvarId]
-
-
       return ()
   | none =>
     log m!"cannot find hypothesis at_idx_over"
@@ -103,15 +96,16 @@ elab "simp_simple" : tactic => do simpSimple
 --    try dsimp,
 --    prove_differentiable
 
-def proveODiff : TacticM Unit := do
-  let goalId ← getMainGoal
+def substEqThenApplyCore (Hname s1 s2 : Name) (f : MVarId → TacticM (List MVarId)) : TacticM Unit := do
   -- `let` tactic corresponds to `Lean.MVarId.define`
   -- `have` roughly corresponds to `Lean.MVarId.assert`, `mvarId.assign` Lean.MVarId.assign
   -- `intro` corresponds to `introStep`, `Lean.MVarId.intro`,
 
-  let H ← (← getLCtx).findFromUserName? `H_at_idx
-  let fshape ← (← getLCtx).findFromUserName? `fshape
-  let shape ← (← getLCtx).findFromUserName? `shape
+  let goalId ← getMainGoal
+
+  let H ← (← getLCtx).findFromUserName? Hname
+  let fshape ← (← getLCtx).findFromUserName? s1
+  let shape ← (← getLCtx).findFromUserName? s2
   let eqH ← mkAppM `Eq #[fshape.toExpr, shape.toExpr]
   let eqV ← mkAppM `And.right #[H.toExpr]
   let assertId ← goalId.assert `H_fshape_eq eqH eqV
@@ -123,12 +117,42 @@ def proveODiff : TacticM Unit := do
   match result? with
   | none => replaceMainGoal []
   | some (_, mvarId) =>
-    let subGoals ← Meta.repeat' proveDifferentiableCore [mvarId]
+    let subGoals ← Meta.repeat' f [mvarId]
     match subGoals with
     | [] => replaceMainGoal []
     | [g] => try Lean.MVarId.assumption  g
       catch exp => setGoals subGoals
     | _ => setGoals subGoals
+
+
+def proveODiff : TacticM Unit := do
+  substEqThenApplyCore `H_at_idx `fshape `shape proveDifferentiableCore
+
+  -- let goalId ← getMainGoal
+  -- -- `let` tactic corresponds to `Lean.MVarId.define`
+  -- -- `have` roughly corresponds to `Lean.MVarId.assert`, `mvarId.assign` Lean.MVarId.assign
+  -- -- `intro` corresponds to `introStep`, `Lean.MVarId.intro`,
+
+  -- let H ← (← getLCtx).findFromUserName? `H_at_idx
+  -- let fshape ← (← getLCtx).findFromUserName? `fshape
+  -- let shape ← (← getLCtx).findFromUserName? `shape
+  -- let eqH ← mkAppM `Eq #[fshape.toExpr, shape.toExpr]
+  -- let eqV ← mkAppM `And.right #[H.toExpr]
+  -- let assertId ← goalId.assert `H_fshape_eq eqH eqV
+  -- let (fid, vid) ← Lean.Meta.intro1Core assertId true
+
+  -- let vid2 ← subst vid fid
+
+  -- let (result?, stats) ← simpGoal vid2 { simpTheorems := #[(← getSimpTheorems)]}
+  -- match result? with
+  -- | none => replaceMainGoal []
+  -- | some (_, mvarId) =>
+  --   let subGoals ← Meta.repeat' proveDifferentiableCore [mvarId]
+  --   match subGoals with
+  --   | [] => replaceMainGoal []
+  --   | [g] => try Lean.MVarId.assumption  g
+  --     catch exp => setGoals subGoals
+  --   | _ => setGoals subGoals
 
     -- replaceMainGoal [mvarId]
 
@@ -178,12 +202,13 @@ elab "prove_pb_correct" : tactic => do provePbCorrect
 def proveOContInit :TacticM Unit := do sorry
 elab "prove_ocont_init" : tactic => do proveOContInit
 
-
 -- meta def prove_ocont :TacticM Unit :=
 -- do prove_ocont_init,
 --    repeat (prove_continuous_core <|> prove_preconditions_core)
 
-def proveOCont :TacticM Unit := do sorry
+def proveOCont :TacticM Unit := do
+  substEqThenApplyCore `H_at_idx `ishape `shape proveContinuousCore
+
 elab "prove_ocont" : tactic => do proveOCont
 
 end tactic
@@ -328,11 +353,19 @@ lemma f_pb_correct (α : TReal) {shape : S} : pullback_correct (@f α shape) (@f
 
 lemma f_ocont (α : TReal) {shape : S} : is_ocontinuous (@f α shape) (@f_pre shape)
 | ⟦x⟧, 0, ishape, H_at_idx, H_pre => by prove_ocont
+  -- have H_ishape_eq : ishape = shape := H_at_idx.right
+  -- subst H_ishape_eq
+  -- simp
+  -- proveContinuous
+
+-- prove_ocont
 | ⟦x⟧, (n+1), ishape, H_at_idx, H_pre => by idx_over
 
 end scale
 
 section open scale
+
+noncomputable
 def scale (α : TReal) (shape : S) : det.op [shape] shape :=
 det.op.mk "scale" (f α) f_pre (f_pb α) (f_odiff α) (f_pb_correct α) (f_ocont α)
 

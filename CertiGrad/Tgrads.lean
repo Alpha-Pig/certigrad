@@ -798,29 +798,6 @@ def checkIsCDifferentiable (e : Expr) : TacticM Expr := do
 --         , to_expr ``(T.is_cdifferentiable_gemm₂ %%k) >>= apply
 -- ]
 
-def myFirstApply (tid : MVarId) (exprs : List (MetaM Expr)) : TacticM (List MVarId) := tid.withContext do
-  -- logInfo m!"myFirstApply is invoked, exprs.length={exprs.length}"
-  match exprs with
-  | [] => --pure []
-    throwError "myFirstApply: None is successful:("
-  | e :: es =>
-    try
-      -- logInfo m! "will extract e"
-      let e' ← e
-      -- logInfo m! "will try e:={e'}"
-      let mvarIds ← tid.apply e'
-      Term.synthesizeSyntheticMVarsNoPostponing
-      -- logInfo m!"myFirstApply, mvardIds: {mvarIds}"
-      return mvarIds
-
-      -- let mvarIds ← (← getMainGoal).apply e'
-      -- Term.synthesizeSyntheticMVarsNoPostponing
-      -- replaceMainGoal mvarIds
-    catch ex =>
-      -- logInfo m!"myFirstApply, ex:={ex.toMessageData}"
-      myFirstApply tid es
-  -- assume exprs consists of a list of App Exprs
-
 -- def proveDifferentiableCoreHelper (grad : Expr) : TacticM (List MVarId) := do
 
 def proveDifferentiableCore (tid : MVarId): TacticM (List MVarId) := do
