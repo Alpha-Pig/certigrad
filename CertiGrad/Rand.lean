@@ -34,6 +34,7 @@ def pdf_function (ishapes : List S) (oshape : S) : Type := Dvec T ishapes → T 
 
 -- `state` is not available in Lean4
 -- Lean3 doc: https://leanprover-community.github.io/mathlib_docs/init/control/state.html#state
+-- here, we use `StateM` instead. Hopefully, it is close enough
 
 def rng_function (ishapes : List S) (oshape : S) : Type := Dvec T ishapes → StateM RNG (T oshape)
 
@@ -312,6 +313,22 @@ end glogpdf
 -- | mvn : ∀ (shape : S), op [shape, shape] shape
 -- | mvn_std : ∀ (shape : S), op [] shape
 
+inductive op : ∀ (ishapes : List S) (oshape : S), Type
+| mvn : ∀ (shape : S), op [shape, shape] shape
+| mvn_std : ∀ (shape : S), op [] shape
+
+
+
+noncomputable
+def op.pdf : ∀ {ishapes : List S} {oshape : S}, op ishapes oshape → pdf_function ishapes oshape
+| [shape, .(shape)], .(shape), (mvn .(shape)) => certigrad.rand.pdf.mvn shape
+| [], shape, (mvn_std .(shape)) => certigrad.rand.pdf.mvn_std shape
+
+noncomputable
+def op.run : ∀ {ishapes : List S} {oshape : S}, op ishapes oshape → rng_function ishapes oshape
+| [shape, .(shape)], .(shape), (mvn .(shape)) => certigrad.rand.run.mvn shape
+| [], shape, (mvn_std .(shape)) => certigrad.rand.run.mvn_std shape
+
 -- namespace op
 
 -- def pdf : Π {ishapes : List S} {oshape : S}, op ishapes oshape → pdf_function ishapes oshape
@@ -351,6 +368,7 @@ end glogpdf
 -- | []               shape (mvn_std .(shape)) => _root_.certigrad.rand.cont.mvn_std shape
 
 -- end op
+
 end rand
 
 -- lemma mvn_pre {shape : S} (xs : Dvec T [shape, shape]) :
