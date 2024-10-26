@@ -44,6 +44,9 @@ noncomputable def E {oshape : S} : ∀ {shapes : List S}, sprog shapes → (Dvec
 
 namespace sprog
 
+-- we got non-termination error due to op.run
+-- use `noncomputable` to suppress the error, which might be problematic.
+noncomputable
 def to_rngprog : ∀ {shapes : List S}, sprog shapes → StateM RNG (Dvec T shapes)
 | shapes, (@ret .(shapes) xs) => return xs
 | shapes, (@bind shapes₁ .(shapes) start rest) => do let xs ← (to_rngprog start); to_rngprog (rest xs)
