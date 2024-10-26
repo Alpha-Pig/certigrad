@@ -40,8 +40,23 @@ def idxOver : TacticM Unit := do
   match (← getLCtx).findFromUserName? `H_at_idx with
   | some l =>
       let e' ←  mkAppM ``at_idx_over #[l.toExpr]
-      let newId ← Lean.MVarId.falseOrByContra (← getMainGoal)
-      setGoals (← newId.apply e')
+      let falseGoalId ← Lean.MVarId.falseOrByContra (← getMainGoal)
+      -- setGoals (← falseGoalId.apply e')
+      -- there should be only one sub-goal at this point, i.e., not (n+1 < 1)
+      for subGoalId in (← falseGoalId.apply e') do
+        -- empty Simp.Context: { simpTheorems := #[]}
+        let (result?, stats) ← simpGoal subGoalId { simpTheorems := #[(← getSimpTheorems)]}
+        match result? with
+        | none => replaceMainGoal []
+        | some (_, mvarId) => replaceMainGoal [mvarId]
+
+      -- run simp on every sub-goal
+    -- let (result?, stats) ← simpGoal mvarId ctx (simprocs := simprocs) (simplifyTarget := simplifyTarget) (discharge? := discharge?) (fvarIdsToSimp := fvarIdsToSimp)
+    -- match result? with
+    -- | none => replaceMainGoal []
+    -- | some (_, mvarId) => replaceMainGoal [mvarId]
+
+
       return ()
   | none =>
     log m!"cannot find hypothesis at_idx_over"
@@ -209,6 +224,7 @@ lemma f_odiff_verbose_proof (α : TReal) {shape : S} : is_odifferentiable (@f α
 -- a bug in `proveDifferentiable`??
 lemma f_odiff (α : TReal) {shape : S} : is_odifferentiable (@f α shape) (@f_pre shape)
 | ⟦x⟧, H_pre, 0, fshape, H_at_idx, k, H_k => by -- prove_odiff
+
   have H_fshape_eq : fshape = shape := H_at_idx.right
   subst H_fshape_eq
   -- rw [H_fshape_eq]
@@ -270,11 +286,10 @@ lemma f_pb_correct (α : TReal) {shape : S} : pullback_correct (@f α shape) (@f
 | xs, y, H_y, g_out, (n+1), fshape, H_at_idx, H_pre => by
   idx_over
 
-
   -- exfalso
   -- apply at_idx_over H_at_idx (by simp)
 
-#print f_pb_correct
+-- #print f_pb_correct
 -- idx_over
 
 lemma f_ocont (α : TReal) {shape : S} : is_ocontinuous (@f α shape) (@f_pre shape)
