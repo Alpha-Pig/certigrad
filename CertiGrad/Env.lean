@@ -36,7 +36,8 @@ namespace pre_env
 -- ∀ (ref : Reference), m₁^.find ref = m₂^.find ref
 
 def eqv (m₁ m₂ : pre_env) : Prop :=
-∀ (ref : Reference), m₁.get! ref = m₂.get! ref
+-- ∀ (ref : Reference), m₁.get! ref = m₂.get! ref
+∀ (ref : Reference), m₁.get? ref = m₂.get? ref
 
 
 -- local infix ~ := eqv
@@ -79,11 +80,32 @@ end pre_env
 -- constant quot : Π {α : Sort u}, (α → α → Prop) → Sort u
 -- constant quot.mk : Π {α : Sort u} (r : α → α → Prop), α → quot r
 
-abbrev env := pre_env.eqv
+-- `quot` implemented in `lean/library/init/core.lean`
+-- https://github.com/leanprover-community/lean/blob/cce7990ea86a78bdb383e38ed7f9b5ba93c60ce0/library/init/core.lean
 
--- namespace env
+-- Lean 4, `Quot` implemented in `lean4/src/Init/Core.lean`
+abbrev Env := Quot pre_env.eqv
+
+namespace env
 
 -- def mk : env := quotient.mk (mk_hash_map Reference.hash)
+
+-- def mk : Env := Quotient.mk (Lean.mkHashMap (α := Reference))
+
+noncomputable
+def get (ref : Reference) (q : Env) : T ref.2 :=
+  Quotient.liftOn q
+  (λ (m : pre_env) =>
+    match m.get? ref with
+    | none => default
+    | some x => x
+  )
+  -- sorry
+  (by
+    intro m₁ m₂ H_eqv
+    have H1 : m₁.get? ref = m₂.get? ref := by apply H_eqv
+    simp [H1])
+
 
 -- def get (ref : Reference) (q : env) : T ref.2 := quotient.lift_on q
 -- (λ (m : pre_env),
@@ -107,9 +129,10 @@ abbrev env := pre_env.eqv
 -- (λ (m : pre_env), m^.contains ref)
 -- begin intros m₁ m₂ H_eqv, simp [hash_map.contains, H_eqv ref] end
 
--- def get_ks : Π (refs : List Reference) (m : env), dvec T refs^.p2
--- | []          m := ⟦⟧
--- | (ref::refs) m := dvec.cons (get ref m) (get_ks refs m)
+noncomputable
+def get_ks : ∀ (refs : List Reference) (m : Env), Dvec T refs.p2
+| [],          m => ⟦⟧
+| (ref::refs), m => Dvec.dcons (get ref m) (get_ks refs m)
 
 -- def insert_all : Π (refs : List Reference) (vs : dvec T refs^.p2), env
 -- | []      ⟦⟧        := env.mk
@@ -308,7 +331,7 @@ abbrev env := pre_env.eqv
 -- { dunfold get_ks, erw dvec.get.equations._eqn_3, exact IH (list.at_idx_of_cons H_at_idx) }
 -- end
 
--- end env
+end env
 
 -- attribute [semireducible] pre_env
 end certigrad
