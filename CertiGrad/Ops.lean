@@ -103,7 +103,40 @@ elab "simp_simple" : tactic => do simpSimple
 --    try dsimp,
 --    prove_differentiable
 
-def proveODiff : TacticM Unit := do sorry
+def proveODiff : TacticM Unit := do
+  let goalId ← getMainGoal
+  -- `let` tactic corresponds to `Lean.MVarId.define`
+  -- `have` roughly corresponds to `Lean.MVarId.assert`, `mvarId.assign` Lean.MVarId.assign
+  -- `intro` corresponds to `introStep`, `Lean.MVarId.intro`,
+
+  let H ← (← getLCtx).findFromUserName? `H_at_idx
+  let fshape ← (← getLCtx).findFromUserName? `fshape
+  let shape ← (← getLCtx).findFromUserName? `shape
+  let eqH ← mkAppM `Eq #[fshape.toExpr, shape.toExpr]
+  let eqV ← mkAppM `And.right #[H.toExpr]
+  let assertId ← goalId.assert `H_fshape_eq eqH eqV
+  let (fid, vid) ← Lean.Meta.intro1Core assertId true
+
+  let vid2 ← subst vid fid
+
+  let (result?, stats) ← simpGoal vid2 { simpTheorems := #[(← getSimpTheorems)]}
+  match result? with
+  | none => replaceMainGoal []
+  | some (_, mvarId) =>
+    let subGoals ← Meta.repeat' proveDifferentiableCore [mvarId]
+    match subGoals with
+    | [] => replaceMainGoal []
+    | [g] => try Lean.MVarId.assumption  g
+      catch exp => setGoals subGoals
+    | _ => setGoals subGoals
+
+    -- replaceMainGoal [mvarId]
+
+
+  -- setGoals [vid2]
+  -- match (← getLCtx).findFromUserName? `H_at_idx with
+  -- | some l => return ()
+  -- | none => return ()
 
 elab "prove_odiff" : tactic => do proveODiff
 
@@ -223,24 +256,25 @@ lemma f_odiff_verbose_proof (α : TReal) {shape : S} : is_odifferentiable (@f α
 -- if we do not use `proveDifferentiable`, it works properly
 -- a bug in `proveDifferentiable`??
 lemma f_odiff (α : TReal) {shape : S} : is_odifferentiable (@f α shape) (@f_pre shape)
-| ⟦x⟧, H_pre, 0, fshape, H_at_idx, k, H_k => by -- prove_odiff
+| ⟦x⟧, H_pre, 0, fshape, H_at_idx, k, H_k => by prove_odiff
+  -- intro
 
-  have H_fshape_eq : fshape = shape := H_at_idx.right
-  subst H_fshape_eq
+  -- have H_fshape_eq : fshape = shape := H_at_idx.right
+  -- subst H_fshape_eq
   -- rw [H_fshape_eq]
-  simp
+  -- simp
 
   -- using `tid.withcontext` does not fully address the problem
   -- we got unknown free variable issue again:
   -- logInfo: done with computeK, k:= fun x => @_fvar.5029 x
   -- solution: we need to use `tid.withContext` wrap myFirstApply as well
-  proveDifferentiable
-  assumption
+  -- proveDifferentiable
+  -- assumption
   -- apply certigrad.T.is_cdifferentiable_scale; assumption
 
-| ⟦x⟧, H_pre, (n+1), fshape, H_at_idx, k, H_k => by -- idx_over
-  have H_False : False := at_idx_over H_at_idx (by simp)
-  contradiction
+| ⟦x⟧, H_pre, (n+1), fshape, H_at_idx, k, H_k => by idx_over
+  -- have H_False : False := at_idx_over H_at_idx (by simp)
+  -- contradiction
 
 -- #print f_odiff2
 
