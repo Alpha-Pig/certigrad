@@ -19,9 +19,12 @@ import CertiGrad.Reference
 -- import Std.Hash
 -- import Lean.Data.HashMap
 
-import Std.Data.DHashMap
+-- import Std.Data.DHashMap
+-- import Batteries.Data.HashMap
 
 namespace certigrad
+
+
 
 def pre_env : Type := Std.DHashMap Reference (λ (ref : Reference) => T ref.2)
 
@@ -88,9 +91,14 @@ abbrev Env := Quot pre_env.eqv
 
 namespace env
 
+-- instance isSetoid (α) : Setoid (Std.DHashMap Reference α) where
+--   r := pre_env.eqv
+
 -- def mk : env := quotient.mk (mk_hash_map Reference.hash)
 
 -- def mk : Env := Quotient.mk (Lean.mkHashMap (α := Reference))
+
+def mk : Env := Quotient.mk certigrad.pre_env.pdmap.eqv_setoid Std.DHashMap.empty --Batteries.mkHashMap --Std.DHashMap.empty
 
 noncomputable
 def get (ref : Reference) (q : Env) : T ref.2 :=
@@ -114,6 +122,24 @@ def get (ref : Reference) (q : Env) : T ref.2 :=
 --   | some x := x
 --   end)
 -- begin intros m₁ m₂ H_eqv, simp [H_eqv ref] end
+
+-- def insert (ref : Reference) (x : T ref.2) (q : Env) : Env :=
+--   Quotient.liftOn q
+--   (λ (m : pre_env) => Quotient.mk certigrad.pre_env.pdmap.eqv_setoid $ m.insert ref x)
+--   (by
+--     intro m₁ m₂ H_eqv
+--     simp
+--     apply Quotient.sound
+--     intro ref'
+--     cases (Decidable.em (ref = ref')) --with H_eq H_neq
+--     case a.inl H =>
+--       subst H
+--       simp
+--     case a.inr H =>
+--       simp
+--     -- simp [H_eqv]
+--     -- unfold Std.DHashMap.insert
+--   )
 
 -- def insert (ref : Reference) (x : T ref.2) (q : env) : env := quotient.lift_on q
 -- (λ (m : pre_env), quotient.mk $ m^.insert ref x)
