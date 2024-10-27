@@ -716,6 +716,30 @@ open tactic util_list
 -- def provePreconditionsCore : TacticM Unit := do
 --   evalTactic $ ← `(tactic| first | assumption | apply certigrad.T.sqrt_pos | apply certigrad.T.square_pos_of_pos | apply certigrad.T.exp_pos | apply certigrad.T.sigmoid_pos | apply certigrad.T.sigmoid_lt1 | apply certigrad.T.lt1_alt | apply certigrad.T.one_plus_pos | apply certigrad.T.plus_one_pos | apply certigrad.T.one_pos | apply certigrad.T.neg_of_pos | apply certigrad.T.const_pos_of_pos | apply certigrad.T.mul_pos_of_pos_pos | apply certigrad.T.add_pos_of_pos_pos | apply certigrad.T.pi_pos | apply certigrad.T.eps_pos | apply certigrad.T.inv_pos | apply certigrad.T.div_pos_pos | apply certigrad.T.two_pos | apply certigrad.T.two_pi_pos)
 
+def provePreconditionsCore (goalId : MVarId) : TacticM (List MVarId) := do
+  let candidate_exprs : List (MetaM Expr) := [
+    (mkAppM ``certigrad.T.sqrt_pos #[]),
+    (mkAppM ``certigrad.T.square_pos_of_pos #[]),
+    (mkAppM ``certigrad.T.exp_pos #[]),
+    (mkAppM ``certigrad.T.sigmoid_pos #[]),
+    (mkAppM ``certigrad.T.sigmoid_lt1 #[]),
+    (mkAppM ``certigrad.T.lt1_alt #[]),
+    (mkAppM ``certigrad.T.one_plus_pos #[]),
+    (mkAppM ``certigrad.T.plus_one_pos #[]),
+    (mkAppM ``certigrad.T.one_pos #[]),
+    (mkAppM ``certigrad.T.neg_of_pos #[]),
+    (mkAppM ``certigrad.T.const_pos_of_pos #[]),
+    (mkAppM ``certigrad.T.mul_pos_of_pos_pos #[]),
+    (mkAppM ``certigrad.T.add_pos_of_pos_pos #[]),
+    (mkAppM ``certigrad.T.pi_pos #[]),
+    (mkAppM ``certigrad.T.eps_pos #[]),
+    (mkAppM ``certigrad.T.inv_pos #[]),
+    (mkAppM ``certigrad.T.div_pos_pos #[]),
+    (mkAppM ``certigrad.T.two_pos #[]),
+    (mkAppM ``certigrad.T.two_pi_pos #[]),
+  ]
+  myFirstApply goalId candidate_exprs
+
 
 -- meta def prove_preconditions : tactic unit := repeat prove_preconditions_core
 

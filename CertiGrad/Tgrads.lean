@@ -852,7 +852,16 @@ def proveDifferentiableCore (tid : MVarId): TacticM (List MVarId) := do
     (mkAppM ``certigrad.T.is_cdifferentiable_div₂ #[k]),
     (mkAppM ``certigrad.T.is_cdifferentiable_square #[k]),
     (mkAppM ``certigrad.T.is_cdifferentiable_sum #[k]),
-    (mkAppM ``certigrad.T.is_cdifferentiable_prod #[k])
+    (mkAppM ``certigrad.T.is_cdifferentiable_prod #[k]),
+
+    -- the following lemmas will be defined later,
+    -- thus cannot use double backtick to check their existence
+    (mkAppM `certigrad.T.is_cdifferentiable_sigmoid #[k]),
+    (mkAppM `certigrad.T.is_cdifferentiable_softplus #[k]),
+    (mkAppM `certigrad.T.is_cdifferentiable_mvn_kl₁ #[k]),
+    (mkAppM `certigrad.T.is_cdifferentiable_mvn_kl₂ #[k]),
+    (mkAppM `certigrad.T.is_cdifferentiable_bernoulli_neglogpdf₁ #[k]),
+    (mkAppM `certigrad.T.is_cdifferentiable_bernoulli_neglogpdf₂ #[k]),
   ]
   -- logInfo m!"constructed all candidates"
 
@@ -894,7 +903,22 @@ def proveDifferentiableCore (tid : MVarId): TacticM (List MVarId) := do
 --     proveDifferentiable_
 
 elab "proveDifferentiable" : tactic => do
-    setGoals (← Meta.repeat' proveDifferentiableCore (← getGoals))
+    -- setGoals (← Meta.repeat' proveDifferentiableCore (← getGoals))
+
+    let varIds ← Meta.repeat' proveDifferentiableCore (← getGoals)
+    let varIds ← Meta.repeat' provePreconditionsCore varIds
+
+    -- attempt to run `assumption` on each sub-goal
+    let varIds ← filterM (fun vid : MVarId => do
+      try
+        let _ ← vid.assumption
+        return false
+      catch e =>
+        return true) varIds
+
+    -- save the remaining sub-goals (if any left)
+    setGoals varIds
+
 
     -- logInfo m!"proveDifferentiable is invoked"
     -- logInfo m!"number of goals {(← getGoals).length}"
@@ -994,44 +1018,50 @@ end simplify_grad
 -- end
 
 -- -- Compounds with prove_differentiable
--- lemma is_cdifferentiable_sigmoid {shape : S} (k : T shape → TReal) (θ : T shape) :
---   is_cdifferentiable k (sigmoid θ) → is_cdifferentiable (λ θ => k (sigmoid θ)) θ :=
--- begin intro H, dunfold sigmoid, prove_differentiable end
 
--- lemma is_cdifferentiable_softplus {shape : S} (k : T shape → TReal) (θ : T shape) :
---   is_cdifferentiable k (softplus θ) → is_cdifferentiable (λ θ => k (softplus θ)) θ :=
--- begin intro H, dunfold softplus, prove_differentiable end
+lemma is_cdifferentiable_sigmoid {shape : S} (k : T shape → TReal) (θ : T shape) :
+  is_cdifferentiable k (sigmoid θ) → is_cdifferentiable (λ θ => k (sigmoid θ)) θ := by
+    intro H
+    unfold sigmoid
+    proveDifferentiable
 
--- lemma is_cdifferentiable_mvn_kl₁ (k : TReal → TReal) (shape : S) (μ σ : T shape) :
---   is_cdifferentiable k (mvn_kl μ σ) → is_cdifferentiable (λ μ => k (mvn_kl μ σ)) μ :=
--- begin intro H, dunfold mvn_kl, prove_differentiable end
+lemma is_cdifferentiable_softplus {shape : S} (k : T shape → TReal) (θ : T shape) :
+  is_cdifferentiable k (softplus θ) → is_cdifferentiable (λ θ => k (softplus θ)) θ := by
+    intro H
+    unfold softplus
+    proveDifferentiable
 
--- lemma is_cdifferentiable_mvn_kl₂ (k : TReal → TReal) (shape : S) (μ σ : T shape) (H_σ : σ > 0) :
---   is_cdifferentiable k (mvn_kl μ σ) → is_cdifferentiable (λ σ => k (mvn_kl μ σ)) σ :=
--- begin
--- intro H, dunfold mvn_kl,
--- apply is_cdifferentiable_binary (λ θ₁ θ₂ => k (-2⁻¹ * T.sum (1 + T.log (square θ₁) + -square μ + -square θ₂))),
--- { dsimp, prove_differentiable },
--- { dsimp, prove_differentiable }
---  end
+lemma is_cdifferentiable_mvn_kl₁ (k : TReal → TReal) (shape : S) (μ σ : T shape) :
+  is_cdifferentiable k (mvn_kl μ σ) → is_cdifferentiable (λ μ => k (mvn_kl μ σ)) μ := by
+  intro H
+  unfold mvn_kl
+  proveDifferentiable
 
--- lemma is_cdifferentiable_bernoulli_neglogpdf₁ (k : TReal → TReal) (shape : S) (p z : T shape) (H_p₁ : p > 0) (H_p₂ : p < 1) :
---   is_cdifferentiable k (bernoulli_neglogpdf p z) → is_cdifferentiable (λ p => k (bernoulli_neglogpdf p z)) p :=
--- begin
--- intro H, dunfold bernoulli_neglogpdf,
--- apply is_cdifferentiable_binary (λ θ₁ θ₂ => k (-T.sum (z * T.log (eps shape + θ₁) + (1 + -z) * T.log (eps shape + (1 + -θ₂))))),
--- { dsimp, prove_differentiable },
--- { dsimp, prove_differentiable }
--- end
+lemma is_cdifferentiable_mvn_kl₂ (k : TReal → TReal) (shape : S) (μ σ : T shape) (H_σ : σ > 0) :
+  is_cdifferentiable k (mvn_kl μ σ) → is_cdifferentiable (λ σ => k (mvn_kl μ σ)) σ := by
+  intro H
+  unfold mvn_kl
+  apply is_cdifferentiable_binary (λ θ₁ θ₂ => k (-2⁻¹ * T.sum (1 + T.log (square θ₁) - square μ - square θ₂)))
+  case a => proveDifferentiable
+  case a => proveDifferentiable
 
--- lemma is_cdifferentiable_bernoulli_neglogpdf₂ (k : TReal → TReal) (shape : S) (p z : T shape) :
---   is_cdifferentiable k (bernoulli_neglogpdf p z) → is_cdifferentiable (λ z => k (bernoulli_neglogpdf p z)) z :=
--- begin
--- intro H, dunfold bernoulli_neglogpdf,
--- apply is_cdifferentiable_binary (λ θ₁ θ₂ => k (-T.sum (θ₁ * T.log (eps shape + p) + (1 + -θ₂) * T.log (eps shape + (1 + -p))))),
--- { dsimp, prove_differentiable },
--- { dsimp, prove_differentiable }
--- end
+
+lemma is_cdifferentiable_bernoulli_neglogpdf₁ (k : TReal → TReal) (shape : S) (p z : T shape) (H_p₁ : p > 0) (H_p₂ : p < 1) :
+  is_cdifferentiable k (bernoulli_neglogpdf p z) → is_cdifferentiable (λ p => k (bernoulli_neglogpdf p z)) p := by
+  intro H
+  unfold bernoulli_neglogpdf
+  apply is_cdifferentiable_binary (λ θ₁ θ₂ => k (-T.sum (z * T.log (eps shape + θ₁) + (1 - z) * T.log (eps shape + (1 - θ₂)))))
+  case a => proveDifferentiable
+  case a => proveDifferentiable
+
+
+lemma is_cdifferentiable_bernoulli_neglogpdf₂ (k : TReal → TReal) (shape : S) (p z : T shape) :
+  is_cdifferentiable k (bernoulli_neglogpdf p z) → is_cdifferentiable (λ z => k (bernoulli_neglogpdf p z)) z := by
+  intro H
+  unfold bernoulli_neglogpdf
+  apply is_cdifferentiable_binary (λ θ₁ θ₂ => k (-T.sum (θ₁ * T.log (eps shape + p) + (1 -θ₂) * T.log (eps shape + (1 - p)))))
+  case a => proveDifferentiable
+  case a => proveDifferentiable
 
 -- Random
 
