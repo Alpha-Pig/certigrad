@@ -123,23 +123,25 @@ def get (ref : Reference) (q : Env) : T ref.2 :=
 --   end)
 -- begin intros m₁ m₂ H_eqv, simp [H_eqv ref] end
 
--- def insert (ref : Reference) (x : T ref.2) (q : Env) : Env :=
---   Quotient.liftOn q
---   (λ (m : pre_env) => Quotient.mk certigrad.pre_env.pdmap.eqv_setoid $ m.insert ref x)
---   (by
---     intro m₁ m₂ H_eqv
---     simp
---     apply Quotient.sound
---     intro ref'
---     cases (Decidable.em (ref = ref')) --with H_eq H_neq
---     case a.inl H =>
---       subst H
---       simp
---     case a.inr H =>
---       simp
---     -- simp [H_eqv]
---     -- unfold Std.DHashMap.insert
---   )
+def insert (ref : Reference) (x : T ref.2) (q : Env) : Env :=
+  Quotient.liftOn q
+  (λ (m : pre_env) => Quotient.mk certigrad.pre_env.pdmap.eqv_setoid $ m.insert ref x)
+  (by
+    intro m₁ m₂ H_eqv
+    simp
+    apply Quotient.sound
+    intro ref'
+    cases (Decidable.em (ref = ref')) --with H_eq H_neq
+    case a.inl H =>
+      subst H
+      simp
+    case a.inr H => sorry
+      -- simp
+    -- simp [H_eqv]
+    -- unfold Std.DHashMap.insert
+  )
+
+-- #print insert
 
 -- def insert (ref : Reference) (x : T ref.2) (q : env) : env := quotient.lift_on q
 -- (λ (m : pre_env), quotient.mk $ m^.insert ref x)
@@ -160,9 +162,9 @@ def get_ks : ∀ (refs : List Reference) (m : Env), Dvec T refs.p2
 | [],          m => ⟦⟧
 | (ref::refs), m => Dvec.dcons (get ref m) (get_ks refs m)
 
--- def insert_all : Π (refs : List Reference) (vs : dvec T refs^.p2), env
--- | []      ⟦⟧        := env.mk
--- | (k::ks) (v:::vs) := env.insert k v (insert_all ks vs)
+def insert_all : ∀ (refs : List Reference) (vs : Dvec T refs.p2), Env
+| [],      ⟦⟧        => certigrad.env.mk
+| (k::ks), (v:::vs) => certigrad.env.insert k v (insert_all ks vs)
 
 -- -- Facts
 -- @[simp] lemma get.def (ref : Reference) (m : pre_env) :
