@@ -902,19 +902,27 @@ def proveDifferentiableCore (tid : MVarId): TacticM (List MVarId) := do
 --     -- logInfo m!"enter proveDifferentiable..."
 --     proveDifferentiable_
 
+elab "proveDifferentiableOnly" : tactic => do
+    setGoals (← Meta.repeat' proveDifferentiableCore (← getGoals))
+
+def myAssumption (varIds : List MVarId) : MetaM (List MVarId) := do
+  filterM (fun vid : MVarId => do try
+      let _ ← vid.assumption; return false
+      catch _ => return true)
+      varIds
+
 elab "proveDifferentiable" : tactic => do
     -- setGoals (← Meta.repeat' proveDifferentiableCore (← getGoals))
 
     let varIds ← Meta.repeat' proveDifferentiableCore (← getGoals)
+
+    -- attempt to run `assumption` on each sub-goal
+    let varIds ← myAssumption varIds
+
     let varIds ← Meta.repeat' provePreconditionsCore varIds
 
     -- attempt to run `assumption` on each sub-goal
-    let varIds ← filterM (fun vid : MVarId => do
-      try
-        let _ ← vid.assumption
-        return false
-      catch e =>
-        return true) varIds
+    let varIds ← myAssumption varIds
 
     -- save the remaining sub-goals (if any left)
     setGoals varIds

@@ -174,7 +174,8 @@ def mvn (shape : S) : pdf_cdiff (pdf.mvn shape) (pre.mvn shape)
 
   case a =>
     proveDifferentiable
-    assumption
+    -- proveDifferentiableOnly
+    -- assumption
 
     -- repeat (first | proveDifferentiable | assumption)
     -- assumption
@@ -183,7 +184,7 @@ def mvn (shape : S) : pdf_cdiff (pdf.mvn shape) (pre.mvn shape)
 
   case a =>
     proveDifferentiable
-    assumption
+    -- assumption
     -- repeat (first | proveDifferentiable | assumption)
     -- repeat proveDifferentiable
     -- assumption
