@@ -123,6 +123,8 @@ def get (ref : Reference) (q : Env) : T ref.2 :=
 --   end)
 -- begin intros m₁ m₂ H_eqv, simp [H_eqv ref] end
 
+-- set_option trace.Meta.Tactic.simp.rewrite true
+
 def insert (ref : Reference) (x : T ref.2) (q : Env) : Env :=
   Quotient.liftOn q
   (λ (m : pre_env) => Quotient.mk certigrad.pre_env.pdmap.eqv_setoid $ m.insert ref x)
@@ -134,11 +136,16 @@ def insert (ref : Reference) (x : T ref.2) (q : Env) : Env :=
     cases (Decidable.em (ref = ref')) --with H_eq H_neq
     case a.inl H =>
       subst H
+      -- set_option trace.Meta.Tactic.simp.rewrite true
       simp
-    case a.inr H => sorry
-      -- simp
-    -- simp [H_eqv]
-    -- unfold Std.DHashMap.insert
+    case a.inr H =>
+      -- set_option trace.Meta.Tactic.simp.rewrite true
+      rw [Std.DHashMap.get?_insert]
+      simp [H]
+      rw [Std.DHashMap.get?_insert]
+      simp [H]
+
+      apply H_eqv
   )
 
 -- #print insert
