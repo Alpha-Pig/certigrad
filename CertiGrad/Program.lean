@@ -12,6 +12,8 @@ import CertiGrad.Graph
 import CertiGrad.Ops
 import CertiGrad.Tactics
 
+-- import Std.Data.DHashMap
+
 
 #print "compiling program..."
 
@@ -43,7 +45,7 @@ inductive Term : Type
 | mvn_kl : Term → Term → Term
 | mvn_empirical_kl : Term → Term → Term → Term
 | bernoulli_neglogpdf : Term → Term → Term
-| id : label → Term
+| id : Label → Term
 
 -- instance : has_neg Term := ⟨term.unary UnaryOp.neg⟩
 -- instance : has_smul TRealterm := ⟨term.scale⟩
@@ -52,7 +54,7 @@ inductive Term : Type
 -- instance : has_mul Term := ⟨term.binary BinaryOp.mul⟩
 -- instance : has_div Term := ⟨term.binary BinaryOp.div⟩
 
--- instance coe_id : has_coe label Term := ⟨term.id⟩
+-- instance coe_id : has_coe Label Term := ⟨term.id⟩
 
 def exp : Term → Term := Term.unary UnaryOp.exp
 def log : Term → Term := Term.unary UnaryOp.log
@@ -65,17 +67,23 @@ inductive rterm : Type
 | mvn_std : S → rterm
 
 inductive statement : Type
-| param : label → S → statement
-| input : label → S → statement
-| cost : label → statement
-| assign : label → Term → statement
-| sample : label → rterm → statement
+| param : Label → S → statement
+| input : Label → S → statement
+| cost : Label → statement
+| assign : Label → Term → statement
+| sample : Label → rterm → statement
 
--- structure state : Type :=
---   (next_id : ℕ) (shapes : hash_map label (λ x => S))
---   (nodes : List node) (costs : List ID) (targets inputs : List Reference)
+structure state : Type :=
+  next_id : Nat
+  -- shapes : hash_map Label (λ x => S)
+  shapes : Std.DHashMap Label (λ x => S)
+  nodes : List Node
+  costs : List ID
+  targets : List Reference
+  inputs : List Reference
 
 -- def empty_state : state := ⟨0, mk_hash_map (λ (x : label)=> x^.to_nat), [], [], [], []⟩
+def empty_state : state := ⟨0, Std.DHashMap.empty , [], [], [], []⟩
 
 -- operators like `ops.neg` are currently commented out in `Ops.lean`
 -- def unary_to_op (shape : S) : UnaryOp → det.op [shape] shape
@@ -95,6 +103,8 @@ inductive statement : Type
 def get_id (next_id : ℕ) : Option ID → ID
 | none => ID.nat next_id
 | (some ident) => ident
+
+def process_term : Term → state → Option ID → Reference × state := sorry
 
 /-
 def process_term : Term → state → Option ID → Reference × state
@@ -193,58 +203,56 @@ def process_term : Term → state → Option ID → Reference × state
    | (some shape) := ((ID.str s, shape), ⟨next_id, shapes, nodes, costs, targets, inputs⟩)
    | none         := (default _, empty_state)
    end
+-/
 
 def process_rterm : rterm → state → Option ID → Reference × state
-| (rterm.mvn t₁ t₂) st ident :=
+| (rterm.mvn t₁ t₂), st, ident =>
     match process_term t₁ st none with
-    | ((p₁, shape'), st') :=
-    match process_term t₂ st' none with
-    | ((p₂, shape), ⟨next_id, shapes, nodes, costs, targets, inputs⟩) :=
-      ((get_id next_id ident, shape),
-        ⟨next_id+1, shapes,
-         concat nodes ⟨(get_id next_id ident, shape), [(p₁, shape), (p₂, shape)], operator.rand (rand.op.mvn shape)⟩,
-         costs, targets, inputs⟩)
-    end
-    end
+    | ((p₁, shape'), st') =>
+      match process_term t₂ st' none with
+      | ((p₂, shape), ⟨next_id, shapes, nodes, costs, targets, inputs⟩) =>
+        ((get_id next_id ident, shape),
+          ⟨next_id+1, shapes,
+          List.concat nodes ⟨(get_id next_id ident, shape), [(p₁, shape), (p₂, shape)], Operator.rand (rand.op.mvn shape)⟩,
+          costs, targets, inputs⟩)
 
-| (rterm.mvn_std shape) ⟨next_id, shapes, nodes, costs, targets, inputs⟩ ident :=
+| (rterm.mvn_std shape), ⟨next_id, shapes, nodes, costs, targets, inputs⟩, ident =>
   ((get_id next_id ident, shape),
    ⟨next_id+1, shapes,
-    nodes ++ [⟨(get_id next_id ident, shape), [], operator.rand (rand.op.mvn_std shape)⟩],
+    nodes ++ [⟨(get_id next_id ident, shape), [], Operator.rand (rand.op.mvn_std shape)⟩],
     costs, targets, inputs⟩)
 
+
 def program_to_graph_core : List statement → state → state
-| [] st := st
-
-| (statement.assign s t::statements) st :=
+| [], st => st
+| (statement.assign s t::statements), st =>
   match process_term t st (some (ID.str s)) with
-  | ((_, shape), ⟨next_id, shapes, nodes, costs, targets, inputs⟩) :=
-     program_to_graph_core statements ⟨next_id, shapes^.insert s shape, nodes, costs, targets, inputs⟩
-  end
+  | ((_, shape), ⟨next_id, shapes, nodes, costs, targets, inputs⟩) =>
+     program_to_graph_core statements ⟨next_id, shapes.insert s shape, nodes, costs, targets, inputs⟩
 
-| (statement.sample s t::statements) st :=
+| (statement.sample s t::statements), st =>
   match process_rterm t st (some (ID.str s)) with
-  | ((_, shape), ⟨next_id, shapes, nodes, costs, targets, inputs⟩) :=
-    program_to_graph_core statements ⟨next_id, shapes^.insert s shape, nodes, costs, targets, inputs⟩
-  end
+  | ((_, shape), ⟨next_id, shapes, nodes, costs, targets, inputs⟩) =>
+    program_to_graph_core statements ⟨next_id, shapes.insert s shape, nodes, costs, targets, inputs⟩
 
-| (statement.param s shape::statements) ⟨next_id, shapes, nodes, costs, targets, inputs⟩ :=
-  program_to_graph_core statements ⟨next_id, shapes^.insert s shape, nodes, costs, concat targets (ID.str s, shape), concat inputs (ID.str s, shape)⟩
-| (statement.input s shape::statements) ⟨next_id, shapes, nodes, costs, targets, inputs⟩ :=
-  program_to_graph_core statements ⟨next_id, shapes^.insert s shape, nodes, costs, targets, concat inputs (ID.str s, shape)⟩
-| (statement.cost s::statements) ⟨next_id, shapes, nodes, costs, targets, inputs⟩ :=
-  program_to_graph_core statements ⟨next_id, shapes, nodes, concat costs (ID.str s), targets, inputs⟩
--/
+| (statement.param s shape::statements), ⟨next_id, shapes, nodes, costs, targets, inputs⟩ =>
+  program_to_graph_core statements ⟨next_id, shapes.insert s shape, nodes, costs, List.concat targets (ID.str s, shape), List.concat inputs (ID.str s, shape)⟩
+
+| (statement.input s shape::statements), ⟨next_id, shapes, nodes, costs, targets, inputs⟩ =>
+  program_to_graph_core statements ⟨next_id, shapes.insert s shape, nodes, costs, targets, List.concat inputs (ID.str s, shape)⟩
+
+| (statement.cost s::statements), ⟨next_id, shapes, nodes, costs, targets, inputs⟩ =>
+  program_to_graph_core statements ⟨next_id, shapes, nodes, List.concat costs (ID.str s), targets, inputs⟩
+
 end program
 
 def program := List program.statement
 
--- def program_to_graph : program → graph
--- | prog =>  match program.program_to_graph_core prog program.empty_state with
---            | ⟨next_id, shapes, nodes, costs, targets, inputs⟩ => ⟨nodes, costs, targets, inputs⟩
---            end
+def program_to_graph : program → Graph
+| prog =>  match program.program_to_graph_core prog program.empty_state with
+           | ⟨next_id, shapes, nodes, costs, targets, inputs⟩ => ⟨nodes, costs, targets, inputs⟩
 
--- def mk_inputs : ∀ (g : graph), Dvec T g.inputs.p2 → env
--- | g, ws => env.insert_all g.inputs ws
+def mk_inputs : ∀ (g : Graph), Dvec T g.inputs.p2 → Env
+| g, ws => certigrad.env.insert_all g.inputs ws
 
 end certigrad

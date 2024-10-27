@@ -94,6 +94,13 @@ def to_nat : Label → Nat
 | p => 22
 | x_all => 23
 
+theorem labelHashCode : ∀ (l : Label), to_nat l < UInt64.size := by
+  intro l
+  cases l <;> simp [to_nat] <;> trivial
+
+
+instance : Hashable Label where
+  hash l := UInt64.ofNatCore (to_nat l) (labelHashCode l)
 
 -- section proofs
 

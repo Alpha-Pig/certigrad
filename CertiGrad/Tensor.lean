@@ -181,7 +181,8 @@ noncomputable instance (shape : S) : OrderedCommRing (T shape) where
   add_assoc := T.IL.add_assoc
   zero_add := T.IL.zero_add
   add_zero := T.IL.add_zero
-  add_left_neg := T.IL.add_left_neg
+  -- add_left_neg := T.IL.add_left_neg
+  neg_add_cancel := T.IL.add_left_neg
   mul_comm := T.IL.mul_comm
   mul_assoc := T.IL.mul_assoc
   one_mul := T.IL.one_mul

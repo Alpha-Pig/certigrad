@@ -32,7 +32,11 @@ structure Node : Type where
   parents : List (ID × S)
   op : Operator parents.p2 ref.2
 
-structure Graph : Type := (nodes : List Node) (costs : List ID) (targets inputs : List Reference)
+structure Graph : Type where
+  nodes : List Node
+  costs : List ID
+  targets : List Reference
+  inputs : List Reference
 
 /-
 
