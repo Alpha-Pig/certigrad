@@ -222,7 +222,7 @@ def f (α : TReal) {shape : S} (xs : Dvec T [shape]) : T shape := α • xs.head
 def f_pre {shape : S} : precondition [shape] := λ xs => True
 
 noncomputable
-def f_pb (α : TReal) {shape : S} (xs : Dvec T [shape]) (y gy : T shape) (idx : TReal) (fshape : S) : T fshape := force (α • gy) fshape
+def f_pb (α : TReal) {shape : S} (xs : Dvec T [shape]) (y gy : T shape) (idx : Nat) (fshape : S) : T fshape := force (α • gy) fshape
 
 attribute [simp] f f_pre f_pb
 
@@ -271,7 +271,7 @@ lemma f_odiff_verbose_proof (α : TReal) {shape : S} : is_odifferentiable (@f α
       simp
       proveDifferentiable
       -- apply certigrad.T.is_cdifferentiable_scale
-      assumption
+      -- assumption
     case dnil.succ n =>
       have H_False : False := at_idx_over H_at_idx (by simp)
       contradiction
@@ -371,7 +371,6 @@ det.op.mk "scale" (f α) f_pre (f_pb α) (f_odiff α) (f_pb_correct α) (f_ocont
 
 end
 
-/-
 namespace neg
 
 noncomputable
@@ -379,7 +378,7 @@ def f {shape : S} (xs : Dvec T [shape]) : T shape := - xs.head
 def f_pre {shape : S} : precondition [shape] := λ xs => True
 
 noncomputable
-def f_pb {shape : S} (xs : Dvec T [shape]) (y gy : T shape) (idx : TReal) (fshape : S) : T fshape := force (-gy) fshape
+def f_pb {shape : S} (xs : Dvec T [shape]) (y gy : T shape) (idx : Nat) (fshape : S) : T fshape := force (-gy) fshape
 
 attribute [simp] f f_pre f_pb
 
@@ -413,7 +412,7 @@ def f {shape : S} (xs : Dvec T [shape]) : T shape := exp xs.head
 def f_pre {shape : S} : precondition [shape] := λ xs => True
 
 noncomputable
-def f_pb {shape : S} (xs : Dvec T [shape]) (y gy : T shape) (idx : TReal) (fshape : S) : T fshape := force (gy * y) fshape
+def f_pb {shape : S} (xs : Dvec T [shape]) (y gy : T shape) (idx : Nat) (fshape : S) : T fshape := force (gy * y) fshape
 
 attribute [simp] f f_pre f_pb
 
@@ -444,12 +443,17 @@ def f {shape : S} (xs : Dvec T [shape]) : T shape := log xs.head
 def f_pre {shape : S} : precondition [shape] := λ xs => xs.head > 0
 
 noncomputable
-def f_pb {shape : S} (xs : Dvec T [shape]) (y gy : T shape) (idx : TReal) (fshape : S) : T fshape := force (gy / xs.head) fshape
+def f_pb {shape : S} (xs : Dvec T [shape]) (y gy : T shape) (idx : Nat) (fshape : S) : T fshape := force (gy / xs.head) fshape
 
 attribute [simp] f f_pre f_pb
 
 lemma f_odiff {shape : S} : is_odifferentiable (@f shape) (@f_pre shape)
-| ⟦x⟧, H_pre, 0, fshape, H_at_idx, k, H_k => by prove_odiff
+| ⟦x⟧, H_pre, 0, fshape, H_at_idx, k, H_k => by
+  simp at H_pre
+  simp [f] at H_k
+  prove_odiff
+  trivial
+  assumption -- handle eta-equivalence,  k  `equiv` (fun x = k x)
 | ⟦x⟧, H_pre, (n+1), fshape, H_at_idx, k, H_k => by idx_over
 
 lemma f_pb_correct {shape : S} : pullback_correct (@f shape) (@f_pre shape) (@f_pb shape)
@@ -468,11 +472,15 @@ def log (shape : S) : det.op [shape] shape :=
 det.op.mk "log" f f_pre f_pb f_odiff f_pb_correct f_ocont
 end
 
+
 namespace sqrt
 
+noncomputable
 def f {shape : S} (xs : Dvec T [shape]) : T shape := sqrt xs.head
 def f_pre {shape : S} : precondition [shape] := λ xs => 0 < xs.head
-def f_pb {shape : S} (xs : Dvec T [shape]) (y gy : T shape) (idx : TReal) (fshape : S) : T fshape := force (gy / (2 * y)) fshape
+
+noncomputable
+def f_pb {shape : S} (xs : Dvec T [shape]) (y gy : T shape) (idx : Nat) (fshape : S) : T fshape := force (gy / (2 * y)) fshape
 
 attribute [simp] f f_pre f_pb
 
@@ -496,6 +504,7 @@ def sqrt (shape : S) : det.op [shape] shape :=
 det.op.mk "sqrt" f f_pre f_pb f_odiff f_pb_correct f_ocont
 end
 
+/-
 namespace sigmoid
 
 noncomputable
@@ -503,13 +512,15 @@ def f {shape : S} (xs : Dvec T [shape]) : T shape := sigmoid xs.head
 def f_pre {shape : S} : precondition [shape] := λ xs => True
 
 noncomputable
-def f_pb {shape : S} (xs : Dvec T [shape]) (y gy : T shape) (idx : TReal) (fshape : S) : T fshape :=
+def f_pb {shape : S} (xs : Dvec T [shape]) (y gy : T shape) (idx : Nat) (fshape : S) : T fshape :=
 force (gy * y * (1 - y)) fshape
 
 attribute [simp] f f_pre f_pb
 
 lemma f_odiff {shape : S} : is_odifferentiable (@f shape) (@f_pre shape)
-| ⟦x⟧, H_pre, 0, fshape, H_at_idx, k, H_k => by prove_odiff
+| ⟦x⟧, H_pre, 0, fshape, H_at_idx, k, H_k => by
+  simp [f] at H_k
+  prove_odiff
 | ⟦x⟧, H_pre, (n+1), fshape, H_at_idx, k, H_k => by idx_over
 
 lemma f_pb_correct {shape : S} : pullback_correct (@f shape) (@f_pre shape) (@f_pb shape)
@@ -517,7 +528,10 @@ lemma f_pb_correct {shape : S} : pullback_correct (@f shape) (@f_pre shape) (@f_
 | xs, y, H_y, g_out, (n+1), fshape, H_at_idx, H_pre => by idx_over
 
 lemma f_ocont {shape : S} : is_ocontinuous (@f shape) (@f_pre shape)
-| ⟦x⟧, 0, ishape, H_at_idx, H_pre => by prove_ocont
+| ⟦x⟧, 0, ishape, H_at_idx, H_pre => by
+  prove_ocont
+  unfold sigmoid
+  prove_ocont
 | ⟦x⟧, (n+1), ishape, H_at_idx, H_pre => by idx_over
 
 end sigmoid
@@ -527,11 +541,12 @@ def sigmoid (shape : S) : det.op [shape] shape :=
 det.op.mk "sigmoid" f f_pre f_pb f_odiff f_pb_correct f_ocont
 end
 
+
 namespace softplus
 
 def f {shape : S} (xs : Dvec T [shape]) : T shape := softplus xs.head
 def f_pre {shape : S} : precondition [shape] := λ xs => True
-def f_pb {shape : S} (xs : Dvec T [shape]) (y gy : T shape) (idx : TReal) (fshape : S) : T fshape :=
+def f_pb {shape : S} (xs : Dvec T [shape]) (y gy : T shape) (idx : Nat) (fshape : S) : T fshape :=
 force (gy / (1 + T.exp (- xs.head))) fshape
 
 attribute [simp] f f_pre f_pb
@@ -559,7 +574,7 @@ namespace add
 
 def f {shape : S} (xs : Dvec T [shape, shape]) : T shape := xs.head + xs.head2
 def f_pre {shape : S} : precondition [shape, shape] := λ xs => True
-def f_pb {shape : S} (xs : Dvec T [shape, shape]) (y gy : T shape) (idx : TReal) (fshape : S) : T fshape := force (gy) fshape
+def f_pb {shape : S} (xs : Dvec T [shape, shape]) (y gy : T shape) (idx : Nat) (fshape : S) : T fshape := force (gy) fshape
 
 attribute [simp] f f_pre f_pb
 
@@ -590,7 +605,7 @@ namespace mul
 def f {shape : S} (xs : Dvec T [shape, shape]) : T shape := xs.head * xs.head2
 def f_pre {shape : S} : precondition [shape, shape] := λ xs => True
 
-def f_pb {shape : S} (xs : Dvec T [shape, shape]) (y gy : T shape) : Π (idx : TReal) (fshape : S), T fshape
+def f_pb {shape : S} (xs : Dvec T [shape, shape]) (y gy : T shape) : Π (idx : Nat) (fshape : S), T fshape
 | 0     fshape := force (gy * xs.head2) fshape
 | 1     fshape := force (gy * xs.head) fshape
 | (n+2) fshape := T.error "mul: index too large"
@@ -624,7 +639,7 @@ namespace sub
 def f {shape : S} (xs : Dvec T [shape, shape]) : T shape := xs.head - xs.head2
 def f_pre {shape : S} : precondition [shape, shape] := λ xs => True
 
-def f_pb {shape : S} (xs : Dvec T [shape, shape]) (y gy : T shape) : Π (idx : TReal) (fshape : S), T fshape
+def f_pb {shape : S} (xs : Dvec T [shape, shape]) (y gy : T shape) : Π (idx : Nat) (fshape : S), T fshape
 | 0     fshape := force (gy) fshape
 | 1     fshape := force (- gy) fshape
 | (n+2) fshape := T.error "sub: index too large"
@@ -658,7 +673,7 @@ namespace div
 def f {shape : S} (xs : Dvec T [shape, shape]) : T shape := xs.head / xs.head2
 def f_pre {shape : S} : precondition [shape, shape] := λ xs => 0 < T.square xs.head2
 
-def f_pb {shape : S} (xs : Dvec T [shape, shape]) (y gy : T shape) : Π (idx : TReal) (fshape : S), T fshape
+def f_pb {shape : S} (xs : Dvec T [shape, shape]) (y gy : T shape) : Π (idx : Nat) (fshape : S), T fshape
 | 0     fshape := force (gy / xs.head2) fshape
 | 1     fshape := force (- (gy * xs.head) / (T.square xs.head2)) fshape
 | (n+2) fshape := T.error "div: index too large"
@@ -691,7 +706,7 @@ namespace sum
 
 def f {shape : S} (xs : Dvec T [shape]) : TReal := T.sum xs.head
 def f_pre {shape : S} : precondition [shape] := λ xs => True
-def f_pb {shape : S} (xs : Dvec T [shape]) (y gy : TReal) (idx : TReal) (fshape : S) : T fshape := force (T.const gy shape) fshape
+def f_pb {shape : S} (xs : Dvec T [shape]) (y gy : TReal) (idx : Nat) (fshape : S) : T fshape := force (T.const gy shape) fshape
 
 attribute [simp] f f_pre f_pb
 
@@ -735,7 +750,7 @@ namespace gemm
 
 def f {m n p : TReal} (xs : Dvec T [[m, n], [n, p]]) : T [m, p] := gemm xs.head xs.head2
 def f_pre {m n p : TReal} : precondition [[m, n], [n, p]] := λ xs => True
-def f_pb {m n p : TReal} (xs : Dvec T [[m, n], [n, p]]) (y gy : T [m, p]) : Π (idx : TReal) (fshape : S), T fshape
+def f_pb {m n p : TReal} (xs : Dvec T [[m, n], [n, p]]) (y gy : T [m, p]) : Π (idx : Nat) (fshape : S), T fshape
 | 0 fshape := force (T.gemm gy (transpose $ xs.head2)) fshape
 | 1 fshape := force (T.gemm (transpose $ xs.head) gy) fshape
 | (n+2) fshape := T.error "gemm: index too large"
@@ -795,7 +810,7 @@ namespace mvn_kl
 def f {shape : S} (xs : Dvec T [shape, shape]) : TReal := mvn_kl xs.head xs.head2
 def f_pre {shape : S} : precondition [shape, shape] := λ xs => 0 < xs.head2
 
-def f_pb {shape : S} (xs : Dvec T [shape, shape]) (y gy : TReal) : Π (idx : TReal) (fshape : S), T fshape
+def f_pb {shape : S} (xs : Dvec T [shape, shape]) (y gy : TReal) : Π (idx : Nat) (fshape : S), T fshape
 | 0     fshape := force (gy • xs.head) fshape
 | 1     fshape := force (gy • (xs.head2 - (1 / xs.head2))) fshape
 | (n+2) fshape := T.error "mvn_kl: index too large"
@@ -879,7 +894,7 @@ namespace mul_add
 
 def f {shape : S} (xs : Dvec T [shape, shape, shape]) : T shape := (xs.head * xs.head2) + xs.head3
 def f_pre {shape : S} : precondition [shape, shape, shape] := λ xs => True
-def f_pb {shape : S} (xs : Dvec T [shape, shape, shape]) (y gy : T shape) : Π (idx : TReal) (fshape : S), T fshape
+def f_pb {shape : S} (xs : Dvec T [shape, shape, shape]) (y gy : T shape) : Π (idx : Nat) (fshape : S), T fshape
 | 0     fshape := force (gy * xs.head2) fshape
 | 1     fshape := force (gy * xs.head) fshape
 | 2     fshape := force gy fshape
@@ -946,7 +961,7 @@ namespace bernoulli_neglogpdf
 def f {shape : S} (xs : Dvec T [shape, shape]) : TReal := bernoulli_neglogpdf xs.head xs.head2
 def f_pre {shape : S} : precondition [shape, shape] := λ xs => 0 < xs.head ∧ xs.head < 1
 
-def f_pb {shape : S} (xs : Dvec T [shape, shape]) (y gy : TReal) : Π (idx : TReal) (fshape : S), T fshape
+def f_pb {shape : S} (xs : Dvec T [shape, shape]) (y gy : TReal) : Π (idx : Nat) (fshape : S), T fshape
 | 0     fshape := force (gy • (1 - xs.head2) / (eps shape + (1 - xs.head)) - gy • (xs.head2 / (eps shape + xs.head))) fshape
 | 1     fshape := force (gy • T.log (eps shape + (1 - xs.head)) - gy • T.log (eps shape + xs.head)) fshape
 | (n+2) fshape := T.error "bernoulli_neglogpdf: index too large"

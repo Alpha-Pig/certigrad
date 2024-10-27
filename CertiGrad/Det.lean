@@ -29,7 +29,7 @@ noncomputable def is_odifferentiable {ishapes : List S} {oshape : S} (f : Dvec T
 noncomputable def pullback_correct {ishapes : List S} {oshape : S}
                (f : Dvec T ishapes → T oshape)
                (f_pre : Dvec T ishapes → Prop)
-               (f_pb : Dvec T ishapes → T oshape → T oshape → Nat → Π fshape, T fshape) : Prop :=
+               (f_pb : Dvec T ishapes → T oshape → T oshape → Nat → ∀ fshape, T fshape) : Prop :=
     ∀ (xs : Dvec T ishapes) (y : T oshape), y = f xs →
       ∀ (g_out : T oshape) {idx : Nat} {fshape : S}, at_idx ishapes idx fshape →
               f_pre xs →

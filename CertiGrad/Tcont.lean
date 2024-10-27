@@ -230,9 +230,12 @@ elab "proveContinuous" : tactic => do
 
 -- end tactic
 
--- namespace T
+namespace T
 
--- -- lemma continuous_mvn_kl₁ {shape : S} (μ σ : T shape) (H_σ : σ > 0) : is_continuous (λ μ₀ => mvn_kl μ₀ σ) μ :=
+-- lemma continuous_mvn_kl₁ {shape : S} (μ σ : T shape) (H_σ : σ > 0) : is_continuous (λ μ₀ => mvn_kl μ₀ σ) μ := by
+--   unfold mvn_kl
+--   proveContinuous
+
 -- -- by { dunfold mvn_kl, prove_continuous }
 
 -- -- lemma continuous_mvn_kl₂ {shape : S} (μ σ : T shape) (H_σ : σ > 0) : is_continuous (λ σ₀ => mvn_kl μ σ₀) σ :=
@@ -255,6 +258,6 @@ elab "proveContinuous" : tactic => do
 -- -- prove_continuous,
 -- -- end
 
--- end T
+end T
 
 end certigrad
