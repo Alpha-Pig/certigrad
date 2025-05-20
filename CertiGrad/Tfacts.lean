@@ -19,6 +19,7 @@ import CertiGrad.Id
 import CertiGrad.Reference
 import CertiGrad.Env
 import CertiGrad.Dvec
+import CertiGrad.SimpAttr
 
 import Mathlib.Data.Nat.Cast.Defs
 
@@ -745,6 +746,15 @@ def provePreconditionsCore (goalId : MVarId) : TacticM (List MVarId) := do
 
 def provePreconditions : TacticM Unit := do
   evalTactic $ ← `(tactic| repeat (first | assumption | apply certigrad.T.sqrt_pos | apply certigrad.T.square_pos_of_pos | apply certigrad.T.exp_pos | apply certigrad.T.sigmoid_pos | apply certigrad.T.sigmoid_lt1 | apply certigrad.T.lt1_alt | apply certigrad.T.one_plus_pos | apply certigrad.T.plus_one_pos | apply certigrad.T.one_pos | apply certigrad.T.neg_of_pos | apply certigrad.T.const_pos_of_pos | apply certigrad.T.mul_pos_of_pos_pos | apply certigrad.T.add_pos_of_pos_pos | apply certigrad.T.pi_pos | apply certigrad.T.eps_pos | apply certigrad.T.inv_pos | apply certigrad.T.div_pos_pos | apply certigrad.T.two_pos | apply certigrad.T.two_pi_pos))
+
+elab "provePreconditions" : tactic => do
+  let goalId ← getMainGoal
+  let mvarIds ← provePreconditionsCore goalId
+  setGoals mvarIds
+  -- setGoals [goalId]
+  -- let mvarIds ← getUnsolvedGoals
+  -- setGoals mvarIds
+  -- setGoals [goalId]
 
 end tactic
 

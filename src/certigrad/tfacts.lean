@@ -424,9 +424,9 @@ axiom is_btw_const {shape₁ shape₂ : S} (y : T shape₂) : is_btw_exp₂ (λ 
 axiom is_btw_sigmoid {shape₁ shape₂ : S} (f : T shape₁ → T shape₂) : is_btw_exp₂ (λ (x : T shape₁), sigmoid (f x))
 axiom is_btw_softplus {shape₁ shape₂ : S} (f : T shape₁ → T shape₂) : is_btw_exp₂ f → is_btw_exp₂ (λ (x : T shape₁), softplus (f x))
 axiom is_btw_sum {shape₁ shape₂ : S} (f : T shape₁ → T shape₂) : is_btw_exp₂ f → is_btw_exp₂ (λ (x : T shape₁), sum (f x))
-axiom is_btw_log_sigmoid {shape₁ shape₂ : S} (f : T shape₁ → T shape₂) (y : T shape₂) : y > 0 → is_btw_exp₂ f → 
+axiom is_btw_log_sigmoid {shape₁ shape₂ : S} (f : T shape₁ → T shape₂) (y : T shape₂) : y > 0 → is_btw_exp₂ f →
   is_btw_exp₂ (λ (x : T shape₁), log (y + sigmoid (f x)))
-axiom is_btw_log_1msigmoid {shape₁ shape₂ : S} (f : T shape₁ → T shape₂) (y : T shape₂) : y > 0 → is_btw_exp₂ f → 
+axiom is_btw_log_1msigmoid {shape₁ shape₂ : S} (f : T shape₁ → T shape₂) (y : T shape₂) : y > 0 → is_btw_exp₂ f →
   is_btw_exp₂ (λ (x : T shape₁), log (y + (1 - sigmoid (f x))))
 
 axiom is_btw_gemm {shape : S} {m n p : ℕ} (f : T shape → T [m, n]) (g : T shape → T [n, p]) :

@@ -10,11 +10,13 @@ import CertiGrad.Util
 import CertiGrad.Rng
 import CertiGrad.Dvec
 import CertiGrad.Id
+import CertiGrad.SimpAttr
 
 import Mathlib.Algebra.Algebra.Defs
 import Mathlib.Algebra.Order.Ring.Defs
 -- run_cmd mk_simp_attr `cgsimp
 
+import Lean.Meta.Tactic.Simp
 namespace certigrad
 
 
